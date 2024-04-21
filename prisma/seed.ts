@@ -1,58 +1,73 @@
 /* eslint-disable no-await-in-loop */
 import { PrismaClient } from '@prisma/client';
+import { faker } from '@faker-js/faker';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  for (let i = 1; i <= 10; i++) {
+  prisma.account.deleteMany();
+  prisma.task.deleteMany();
+  prisma.employee.deleteMany();
+  prisma.learningMaterial.deleteMany();
+
+  const departments = ['HR', 'IT', 'Finance', 'Marketing', 'Sales'];
+  const employeesCount = 17;
+  const learningMaterialsCount = 5;
+  const maxTasksPerEmployee = 3;
+
+  for (let i = 1; i <= learningMaterialsCount; i++) {
+    await prisma.learningMaterial.create({
+      data: {
+        title: `Learning Material ${i}`,
+        content: faker.lorem.paragraph(),
+      },
+    });
+  }
+
+  const learningMaterials = await prisma.learningMaterial.findMany();
+
+  for (let i = 1; i <= employeesCount; i++) {
     const employee = await prisma.employee.create({
       data: {
-        firstName: `Employee ${i}`,
-        lastName: `Lastname ${i}`,
-        email: `employee${i}@example.com`,
-        position: `Position ${i}`,
-        department: `Department ${i}`,
-        startDate: new Date(),
+        firstName: faker.person.firstName(),
+        lastName: faker.person.lastName(),
+        email: faker.internet.email(),
+        position: faker.person.jobTitle(),
+        department: departments[Math.floor(Math.random() * departments.length)],
+        startDate: faker.date.past(),
       },
     });
 
-    const account = await prisma.account.create({
+    await prisma.account.create({
       data: {
-        username: `username${i}`,
-        password: `password${i}`,
+        username: faker.internet.userName(),
+        password: faker.internet.password(),
         accessLevel: 'user',
         employeeId: employee.id,
       },
     });
 
-    const taskCount = Math.random() * 3;
+    // take 0-3 random learning materials
+    const count = Math.floor(Math.random() * maxTasksPerEmployee + 1);
+    const randomIndexes = [...learningMaterials]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, count);
 
-    for (let taskNo = 1; taskNo < taskCount; taskNo++) {
-      const task = await prisma.task.create({
+    for (const learningMaterial of randomIndexes) {
+      await prisma.task.create({
         data: {
-          title: `Task ${i} ${taskNo}`,
-          description: `Description for task ${i} ${taskNo}`,
+          title: `${employee.firstName} ${employee.lastName} - ${learningMaterial.title}`,
+          description: `Learn ${learningMaterial.title}`,
           employeeId: employee.id,
+          learningMaterialId: learningMaterial.id,
         },
       });
-
-      const itemsCount = Math.random() * 4;
-
-      for (let itemNo = 1; itemNo < itemsCount; itemNo++) {
-        await prisma.learningMaterial.create({
-          data: {
-            title: `Learning Material ${i} ${taskNo} ${itemNo}`,
-            content: `Content for learning material ${i} ${taskNo} ${itemNo}`,
-            taskId: task.id,
-          },
-        });
-      }
     }
   }
 }
 
 main()
-  .catch((e) => {
+  .catch(e => {
     console.error(e);
     process.exit(1);
   })

@@ -8,6 +8,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// generator zod {
+//   provider = "prisma-zod-generator"
+// }
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
@@ -21,25 +25,8 @@ model Employee {
   position   String
   department String
   startDate  DateTime
-  tasks      Task[]   @relation("EmployeeTasks")
+  tasks      Task[]
   account    Account?
-}
-
-model Task {
-  id                Int                @id @default(autoincrement())
-  title             String
-  description       String
-  employeeId        Int
-  employee          Employee           @relation("EmployeeTasks", fields: [employeeId], references: [id])
-  learningMaterials LearningMaterial[] @relation("TaskLearningMaterials")
-}
-
-model LearningMaterial {
-  id      Int    @id @default(autoincrement())
-  title   String
-  content String
-  taskId  Int
-  task    Task   @relation("TaskLearningMaterials", fields: [taskId], references: [id])
 }
 
 model Account {
@@ -47,6 +34,26 @@ model Account {
   username    String    @unique
   password    String
   accessLevel String
-  employeeId  Int      @unique
+  employeeId  Int       @unique
   employee    Employee? @relation(fields: [employeeId], references: [id])
+}
+
+model LearningMaterial {
+  id      Int    @id @default(autoincrement())
+  title   String
+  content String
+  tasks   Task[]
+}
+
+model Task {
+  id                 Int              @id @default(autoincrement())
+  title              String
+  description        String
+  deadline           DateTime?
+  employeeId         Int
+  employee           Employee         @relation(fields: [employeeId], references: [id])
+  learningMaterialId Int
+  learningMaterial   LearningMaterial @relation(fields: [learningMaterialId], references: [id])
+
+  @@unique([employeeId, learningMaterialId])
 }
